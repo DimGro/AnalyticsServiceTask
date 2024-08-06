@@ -17,6 +17,21 @@ namespace Analytics
 
         public static AnalyticsService Instance { get; private set; }
 
+        private AnalyticsEventsPackage CurrentCollectingPackage
+        {
+            get
+            {
+                if (currentCollectingPackage == null)
+                {
+                    currentCollectingPackage = new AnalyticsEventsPackage();
+                    storageData.packages.Add(currentCollectingPackage);
+                    SaveStorageData();
+                }
+
+                return currentCollectingPackage;
+            }
+        }
+
         private void Awake()
         {
             InitSingleton();
@@ -25,22 +40,15 @@ namespace Analytics
         private void Start()
         {
             LoadStorageData();
-            
-            foreach (var package in storageData.packages)
-                StartCoroutine(SendPackage(package));
+
+            if (storageData.packages.Count > 0) StartCoroutine(SendPackage(storageData.packages[0]));
         }
 
         public void TrackEvent(string type, string data)
         {
             var eventData = new AnalyticsEventData(type, data);
-            
-            if (currentCollectingPackage == null)
-            {
-                currentCollectingPackage = new AnalyticsEventsPackage();
-                storageData.packages.Add(currentCollectingPackage);
-            }
-            
-            currentCollectingPackage.events.Add(eventData);
+
+            CurrentCollectingPackage.events.Add(eventData);
             SaveStorageData();
             
             if (!isCooldownActive) StartCoroutine(SendPackageDelayed(currentCollectingPackage));
@@ -60,27 +68,25 @@ namespace Analytics
 
             var json = JsonConvert.SerializeObject(package);
 
-            var request = new UnityWebRequest(serverUrl, "POST");
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+            using var request = new UnityWebRequest(serverUrl, "POST");
+            var bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
-            
+
             Debug.Log($"[{nameof(AnalyticsService)}] - Sending web request. Json: {json}");
 
             yield return request.SendWebRequest();
 
             Debug.Log($"[{nameof(AnalyticsService)}] - Received web request result. Result: {request.result.ToString()}. ResponseCode: {request.responseCode}. Json: {json}");
 
-            if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
+            storageData.packages.Remove(package);
+            if (request.result != UnityWebRequest.Result.Success || request.responseCode != 200)
             {
-                storageData.packages.Remove(package);
-                SaveStorageData();
+                foreach (var eventData in package.events)
+                    CurrentCollectingPackage.events.Add(eventData);
             }
-            else
-            {
-                // StartCoroutine(SendPackages(package));
-            }
+            SaveStorageData();
         }
 
         private void LoadStorageData() => storageData = StorageService.Instance.LoadData<AnalyticsStorageData>();
