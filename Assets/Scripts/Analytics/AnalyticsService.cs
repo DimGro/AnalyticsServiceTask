@@ -13,6 +13,7 @@ namespace Analytics
         
         private AnalyticsStorageData storageData;
         private AnalyticsEventsPackage currentCollectingPackage;
+        private bool isCooldownActive;
 
         public static AnalyticsService Instance { get; private set; }
 
@@ -26,7 +27,7 @@ namespace Analytics
             LoadStorageData();
             
             foreach (var package in storageData.packages)
-                StartCoroutine(SendPackages(package));
+                StartCoroutine(SendPackage(package));
         }
 
         public void TrackEvent(string type, string data)
@@ -41,21 +42,23 @@ namespace Analytics
             
             currentCollectingPackage.events.Add(eventData);
             SaveStorageData();
-
-            StartCoroutine(SendPackageDelayed(currentCollectingPackage));
+            
+            if (!isCooldownActive) StartCoroutine(SendPackageDelayed(currentCollectingPackage));
         }
         
         private IEnumerator SendPackageDelayed(AnalyticsEventsPackage package)
         {
+            isCooldownActive = true;
             yield return new WaitForSeconds(cooldownBeforeSend);
-            StartCoroutine(SendPackages(package));
+            isCooldownActive = false;
+            StartCoroutine(SendPackage(package));
         }
 
-        private IEnumerator SendPackages(AnalyticsEventsPackage package)
+        private IEnumerator SendPackage(AnalyticsEventsPackage package)
         {
             if (package == currentCollectingPackage) currentCollectingPackage = null;
 
-            var json = JsonConvert.SerializeObject(package.events);
+            var json = JsonConvert.SerializeObject(package);
 
             var request = new UnityWebRequest(serverUrl, "POST");
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
@@ -76,7 +79,7 @@ namespace Analytics
             }
             else
             {
-                StartCoroutine(SendPackages(package));
+                // StartCoroutine(SendPackages(package));
             }
         }
 

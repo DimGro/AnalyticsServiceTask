@@ -220,7 +220,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0abc1e3c086c4a9e8398fa73c2f276d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serverUrl: asdadsassd
+  serverUrl: www.SomeWrongURL.com
   cooldownBeforeSend: 3
 --- !u!4 &508004936
 Transform:
@@ -721,8 +721,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc88eeaa5d6e46fda63ac6909a43064a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  eventType: asda
-  eventData: 123123
+  eventType: SomeType
+  eventData: SomeData
 --- !u!1 &1707903438
 GameObject:
   m_ObjectHideFlags: 0
