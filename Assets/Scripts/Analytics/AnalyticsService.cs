@@ -62,8 +62,12 @@ namespace Analytics
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
+            
+            Debug.Log($"[{nameof(AnalyticsService)}] - Sending web request. Json: {json}");
 
             yield return request.SendWebRequest();
+
+            Debug.Log($"[{nameof(AnalyticsService)}] - Received web request result. Result: {request.result.ToString()}. ResponseCode: {request.responseCode}. Json: {json}");
 
             if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
             {
