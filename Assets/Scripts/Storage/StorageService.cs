@@ -21,7 +21,7 @@ namespace Storage
             Debug.Log($"[{nameof(StorageService)}] - Saving data. Key: {dataKey}. Data: {serializedData}");
         }
 
-        public T LoadData<T>(string id) where T : new()
+        public T LoadData<T>(string id = "") where T : new()
         {
             var data = new T();
             var dataKey = GetDataKey<T>(id);
