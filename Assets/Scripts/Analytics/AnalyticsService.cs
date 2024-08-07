@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Storage;
 using UnityEngine;
@@ -40,8 +41,7 @@ namespace Analytics
         private void Start()
         {
             LoadStorageData();
-
-            if (storageData.packages.Count > 0) StartCoroutine(SendPackage(storageData.packages[0]));
+            TrySendCachedPackages();
         }
 
         public void TrackEvent(string type, string data)
@@ -75,18 +75,29 @@ namespace Analytics
             request.SetRequestHeader("Content-Type", "application/json");
 
             Debug.Log($"[{nameof(AnalyticsService)}] - Sending web request. Json: {json}");
-
             yield return request.SendWebRequest();
-
             Debug.Log($"[{nameof(AnalyticsService)}] - Received web request result. Result: {request.result.ToString()}. ResponseCode: {request.responseCode}. Json: {json}");
 
             storageData.packages.Remove(package);
+            
             if (request.result != UnityWebRequest.Result.Success || request.responseCode != 200)
-            {
-                foreach (var eventData in package.events)
-                    CurrentCollectingPackage.events.Add(eventData);
-            }
+                MergePackage(package);
+            
             SaveStorageData();
+        }
+
+        private void TrySendCachedPackages()
+        {
+            if (storageData.packages.Count <= 0) return;
+            
+            foreach (var package in storageData.packages)
+                StartCoroutine(SendPackage(package));
+        }
+
+        private void MergePackage(AnalyticsEventsPackage package)
+        {
+            foreach (var eventData in package.events)
+                CurrentCollectingPackage.events.Add(eventData);
         }
 
         private void LoadStorageData() => storageData = StorageService.Instance.LoadData<AnalyticsStorageData>();
